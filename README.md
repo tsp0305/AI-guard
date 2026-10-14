@@ -94,6 +94,19 @@ The workflow orchestrator issues the scoped capabilities and invokes the agents 
 | `experiments/`, `tests/` | Earlier helpdesk prototype materials and project checks. |
 | `PLAN.md` | Project scope and proposed future work. |
 
+## Research background and evaluation
+
+DelegateGuard also contains an exploratory security-research prototype. The research question is whether per-agent identities and invocation-bound, attenuating capabilities can reduce unauthorized tool use in delegated workflows while preserving legitimate task completion and producing attributable audit events. This connects to the broader problems of least-privilege authorization, confused deputies, delegation, prompt injection, replay, and forensic attribution in agentic systems.
+
+The repository has two related but distinct parts:
+
+- The **helpdesk simulator** in `delegateguard/system.py` and `experiments/` is the earlier experimental environment. It compares a shared-authority baseline with DelegateGuard across indirect prompt-injection cases, benign tasks, direct escalation attempts, authorization depth, and an in-scope misuse case.
+- The **finance operations demo** described above is an interactive use case showing the same access-control concept in an invoice workflow. Its agents use deterministic Python logic and sample records; it is not the experimental evaluation and does not use a real LLM.
+
+The experiment runner is `experiments/run_experiments.py`. Its generated outputs are in `results/results.json` and `results/results.md`. The checked-in results use a `SimulatedBrain` that follows injected instructions with a configured probability; they are simulation outputs, not measurements of a deployed system or a real language model. For example, the recorded helpdesk simulation reports zero out-of-scope attack success for DelegateGuard in its tested cases, while its separate in-scope misuse case still succeeds frequently. That limitation is important: capability enforcement can bound what tools and resources a compromised agent may access, but it does not determine whether an allowed action is appropriate.
+
+Treat these results as exploratory and specific to this simulator, its generated cases, configuration, and implementation. They do not establish general security effectiveness, real-world prompt-injection resistance, or production performance. Re-run the experiments before citing results, inspect the generated artifacts and configuration, and clearly label the simulated agent. A stronger evaluation should use independently designed cases, repeated runs and uncertainty estimates, explicit false-block and task-success measurements, and carefully controlled real-model experiments where appropriate. Do not present simulator percentages as real-world or LLM evaluation results.
+
 ## Current scope and limitations
 
 This is a learning and demonstration prototype, not a production finance system. It uses deterministic agent logic and synthetic in-memory business records. It does not parse uploaded invoices, use an LLM, authenticate real employees, connect to an accounting provider, or implement human approval and payment release. The current signing keys and local SQLite state are for a local demo, not production key management or durable multi-user operation.
