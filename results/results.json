@@ -1,0 +1,172 @@
+{
+  "injection": {
+    "baseline": {
+      "ASR": 0.9666666666666667,
+      "task_success_under_attack": 1.0,
+      "harmful_attempts": 72,
+      "caller_attribution": 0.0,
+      "authorizer_attribution": null,
+      "log_verifies": null
+    },
+    "delegateguard": {
+      "ASR": 0.0,
+      "task_success_under_attack": 1.0,
+      "harmful_attempts": 72,
+      "caller_attribution": 1.0,
+      "authorizer_attribution": 1.0,
+      "log_verifies": true
+    }
+  },
+  "benign": {
+    "baseline": {
+      "task_success": 1.0,
+      "false_block_rate": 0.0
+    },
+    "delegateguard": {
+      "task_success": 1.0,
+      "false_block_rate": 0.0
+    }
+  },
+  "direct": {
+    "baseline": {
+      "forged_token": {
+        "success_rate": 1.0
+      },
+      "self_extended_token": {
+        "success_rate": 1.0
+      },
+      "stolen_token": {
+        "success_rate": 1.0
+      },
+      "replay_after_close": {
+        "success_rate": 1.0
+      },
+      "depth_exceeded": {
+        "success_rate": 1.0
+      },
+      "overall_attack_success": 1.0,
+      "overall_block_rate": 0.0
+    },
+    "delegateguard": {
+      "forged_token": {
+        "success_rate": 0.0
+      },
+      "self_extended_token": {
+        "success_rate": 0.0
+      },
+      "stolen_token": {
+        "success_rate": 0.0
+      },
+      "replay_after_close": {
+        "success_rate": 0.0
+      },
+      "depth_exceeded": {
+        "success_rate": 0.0
+      },
+      "overall_attack_success": 0.0,
+      "overall_block_rate": 1.0
+    }
+  },
+  "overhead": {
+    "baseline": {
+      "mean_ms": 0.0010356718363861241,
+      "p95_ms": 0.001800013706088066
+    },
+    "delegateguard": {
+      "depth_1": {
+        "mean_ms": 0.7477933432285984,
+        "p95_ms": 1.216299831867218,
+        "token_bytes": 719,
+        "success_rate": 1.0
+      },
+      "depth_2": {
+        "mean_ms": 1.0684443241916597,
+        "p95_ms": 1.8054000101983547,
+        "token_bytes": 1035,
+        "success_rate": 1.0
+      },
+      "depth_3": {
+        "mean_ms": 1.177723997582992,
+        "p95_ms": 1.6105999238789082,
+        "token_bytes": 1346,
+        "success_rate": 1.0
+      },
+      "depth_4": {
+        "mean_ms": 1.5067126617456474,
+        "p95_ms": 2.328400034457445,
+        "token_bytes": 1653,
+        "success_rate": 1.0
+      },
+      "depth_5": {
+        "mean_ms": 1.6118079967175922,
+        "p95_ms": 2.41499999538064,
+        "token_bytes": 1960,
+        "success_rate": 1.0
+      }
+    }
+  },
+  "in_scope": {
+    "baseline": {
+      "ASR": 0.9666666666666667
+    },
+    "delegateguard": {
+      "ASR": 0.7666666666666667
+    }
+  },
+  "sensitivity": {
+    "0.3": {
+      "baseline": {
+        "ASR": 0.4666666666666667,
+        "task_success_under_attack": 1.0,
+        "harmful_attempts": 24,
+        "caller_attribution": 0.0,
+        "authorizer_attribution": null,
+        "log_verifies": null
+      },
+      "delegateguard": {
+        "ASR": 0.0,
+        "task_success_under_attack": 1.0,
+        "harmful_attempts": 24,
+        "caller_attribution": 1.0,
+        "authorizer_attribution": 1.0,
+        "log_verifies": true
+      }
+    },
+    "0.6": {
+      "baseline": {
+        "ASR": 0.8333333333333334,
+        "task_success_under_attack": 1.0,
+        "harmful_attempts": 56,
+        "caller_attribution": 0.0,
+        "authorizer_attribution": null,
+        "log_verifies": null
+      },
+      "delegateguard": {
+        "ASR": 0.0,
+        "task_success_under_attack": 1.0,
+        "harmful_attempts": 56,
+        "caller_attribution": 1.0,
+        "authorizer_attribution": 1.0,
+        "log_verifies": true
+      }
+    },
+    "1.0": {
+      "baseline": {
+        "ASR": 1.0,
+        "task_success_under_attack": 1.0,
+        "harmful_attempts": 84,
+        "caller_attribution": 0.0,
+        "authorizer_attribution": null,
+        "log_verifies": null
+      },
+      "delegateguard": {
+        "ASR": 0.0,
+        "task_success_under_attack": 1.0,
+        "harmful_attempts": 84,
+        "caller_attribution": 1.0,
+        "authorizer_attribution": 1.0,
+        "log_verifies": true
+      }
+    }
+  }
+}
