@@ -6,14 +6,18 @@ class FinanceTools:
     SCHEMAS = {
         "read_invoice": {"id"},
         "verify_invoice": {"id"},
+        "assess_invoice_risk": {"id"},
         "create_payment_draft": {"id"},
     }
 
-    def __init__(self):
+    def __init__(self, advisor):
+        self.advisor = advisor
         self.invoices = deepcopy(SAMPLE_INVOICES)
         self.vendors = deepcopy(SAMPLE_VENDORS)
         self.purchase_orders = deepcopy(SAMPLE_PURCHASE_ORDERS)
         self.verifications = {}
+        self.verification_results = {}
+        self.risk_assessments = {}
         self.drafts = {}
 
     def validate(self, tool, args):
@@ -56,10 +60,20 @@ class FinanceTools:
                 flags.append("Duplicate vendor invoice number")
             passed = not flags
             self.verifications[(invocation_id, invoice_id)] = passed
-            return {"status": "verified" if passed else "needs_review", "flags": flags}
+            result = {"status": "verified" if passed else "needs_review", "flags": flags}
+            self.verification_results[(invocation_id, invoice_id)] = result
+            return result
+        if tool == "assess_invoice_risk":
+            verification = self.verification_results.get((invocation_id, invoice_id), {"status": "needs_review", "flags": ["Verification did not run"]})
+            result = self.advisor.assess_risk(invoice, verification)
+            self.risk_assessments[(invocation_id, invoice_id)] = result
+            return result
         if tool == "create_payment_draft":
             if not self.verifications.get((invocation_id, invoice_id), False):
                 raise ValueError("invoice has not passed verification in this invocation")
+            risk = self.risk_assessments.get((invocation_id, invoice_id))
+            if not risk or risk.get("level") != "low":
+                raise ValueError("invoice risk has not passed in this invocation")
             draft_id = f"PAY-{len(self.drafts) + 1:04d}"
             draft = {
                 "id": draft_id, "invoice_id": invoice_id,

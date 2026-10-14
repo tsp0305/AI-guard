@@ -106,6 +106,10 @@ def create_app(gateway, demo_system=None, finance_workflow=None):
         def finance_invoices():
             return {"invoices": finance_workflow.list_invoices()}
 
+        @app.get("/v1/finance/status")
+        def finance_status():
+            return {"agents": 4, "model": finance_workflow.advisor.status()}
+
         @app.post("/v1/finance/process/stream")
         async def process_invoice_stream(request: FinanceRunRequest):
             updates = queue.Queue()
