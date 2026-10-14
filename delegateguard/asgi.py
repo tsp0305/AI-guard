@@ -1,6 +1,6 @@
-"""Local UI demo. Uses ephemeral identities, a simulated brain, and mock tools."""
+"""Local finance demo app. Uses sample records, ephemeral keys, and simulated drafts."""
 from .api import create_app
-from .system import HelpdeskSystem, SimulatedBrain
+from .finance import InvoiceWorkflow
 
-_demo_system = HelpdeskSystem(mode="delegateguard", brain=SimulatedBrain(p=1.0))
-app = create_app(_demo_system.gw, demo_system=_demo_system)
+finance_workflow = InvoiceWorkflow()
+app = create_app(finance_workflow.gateway, finance_workflow=finance_workflow)

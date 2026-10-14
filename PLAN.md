@@ -1,31 +1,28 @@
-# DelegateGuard implementation plan
+# DelegateGuard Finance Demo Plan
 
-This plan separates the working prototype from the work required for a limited pilot. The checked boxes describe repository capabilities; they do not imply production readiness.
+## Implemented prototype
 
-## Implemented in the prototype
+- [x] Finance operations use case: sample accounts-payable invoice processing.
+- [x] Three separate agent roles: Invoice Reader, Invoice Verifier, Payment Drafter.
+- [x] Per-invocation, per-invoice, per-agent tool capabilities.
+- [x] Sample vendor and purchase-order checks, amount limit, and duplicate detection.
+- [x] Simulated payment drafts only after verification passes.
+- [x] Demonstration of an invoice prompt injection attempting an out-of-scope draft action.
+- [x] Browser console with sample cases, outcomes, and audit events.
 
-- [x] Signed Ed25519 delegation chains with tool, expiry, depth, invocation, and argument-constraint checks.
-- [x] Strict schemas for the included mock helpdesk tools.
-- [x] FastAPI factory and local ASGI demo with health and process-local metrics endpoints.
-- [x] SQLite persistence for closed invocations and per-invocation tool call limits.
-- [x] JSONL hash-chained audit events signed by the configured gateway identity.
-- [x] PEM key loading interfaces for identities and public-key registry setup.
-- [x] Provider-neutral structured-output model adapter interface.
+## Prototype walkthrough
 
-## Required before a limited pilot
+1. Process `INV-1001`; show a clean verification and draft.
+2. Process `INV-1002`; show that vendor mismatch/unapproved status stops draft creation.
+3. Process `INV-1003`; show the reader's injected draft attempt blocked by its capability, followed by verification and a legitimate draft by the Payment Drafter.
+4. Process `INV-1004`; show duplicate detection.
 
-1. **Identity and keys:** connect managed workload identities, enforce key rotation, load stable gateway signing keys, and verify audit records across restarts and rotations.
-2. **Tool adapters:** replace mocks with narrow business-system adapters using isolated least-privilege credentials, timeouts, idempotency, and bounded retries.
-3. **Approval workflow:** add reviewer identities and an authenticated approval process bound to the exact invocation, tool, and arguments. Require approval for high-impact actions.
-4. **Operational controls:** protect the API with deployment authentication and network policy, export metrics and audit events, configure alerts, and implement state/audit retention and recovery.
-5. **Policy review:** version policies and schemas; define limits for records, recipients, data classes, state transitions, and action frequency.
-6. **Model integration:** configure a provider client, structured output, privacy controls, and failure behavior. Treat retrieved content and model output as untrusted.
+## Future work
 
-## Validation and release
+1. Add an authenticated human approval/rejection step bound to the exact draft contents.
+2. Replace in-memory fixtures with a database and add user-uploaded invoice parsing.
+3. Replace deterministic agent logic with an LLM adapter; treat invoice content and model output as untrusted.
+4. Add stable managed identities, audit-key continuity, retention, monitoring, and deployment authentication.
+5. Add regression and integration tests for cross-invoice access, malformed tool calls, replay, duplicate handling, and approval enforcement.
 
-- Run the unit suite and the simulation suite after code changes.
-- Add integration tests for API authentication, restart persistence, key rotation, audit verification, and approval decisions.
-- Evaluate prompt injection against the actual selected model and connected tools; simulated results are not evidence of model robustness.
-- Use staging to rehearse backups, restore, incident response, and operator review before any pilot.
-
-The local demo is for development and review only. It uses mock tools and ephemeral identities and should not be exposed as a production service.
+The demo has no accounting-system connection and cannot release payments. Keep real payment integrations out of scope until identity, approval, and operational controls are designed and reviewed.

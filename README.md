@@ -1,75 +1,101 @@
 # DelegateGuard
 
-DelegateGuard is a Python prototype of a capability-enforcing gateway for tool-using agents. It verifies signed delegation chains, validates tool requests, enforces invocation closure and configured call limits, and writes hash-chained audit events.
+DelegateGuard is a small, interactive prototype that demonstrates how to govern tool access in a multi-agent finance workflow. Its sample accounts-payable process reviews invoices and prepares simulated payment drafts while limiting each agent to the specific action it needs.
 
-The included helpdesk system uses mock tools and process-generated identities. The HTTP app is a local integration demo. The repository is not a production-ready security product: real identity provisioning, durable gateway signing keys, external business adapters, human approval flows, and production monitoring still need to be supplied.
+> **Prototype only:** this project uses synthetic records and simulated drafts. It does not connect to a bank or accounting system, approve or release payments, or move money.
 
-## Quick start
+## What problem does it address?
 
-From the repository root, on Windows PowerShell:
+When agents hand work to other agents, a broadly shared tool credential can let any agent perform actions outside its intended role. For example, an invoice-reading agent that encounters malicious instructions should not be able to create a payment draft. If every agent shares the same authority, it is harder to contain misuse and determine which agent made a tool call.
+
+DelegateGuard demonstrates a least-privilege approach: each agent gets a short-lived, signed capability for a specific invocation, with a narrow tool scope and invoice constraint. A gateway checks each tool call against that capability and the project policy, then records whether the call was allowed or blocked. This limits the actions available to an agent and provides an audit trail for the demo.
+
+## What the project does
+
+The browser console runs a three-agent accounts-payable workflow on synthetic invoice, vendor, and purchase-order records:
+
+1. **Invoice Reader** reads the selected invoice.
+2. **Invoice Verifier** checks the vendor, purchase order, currency, amount, and duplicate invoice number.
+3. **Payment Drafter** creates a simulated draft only after verification succeeds.
+
+The UI streams the workflow stages and tool decisions as they happen. A successful draft is marked as awaiting human approval; there is no payment-release action.
+
+## Features
+
+- **Scoped agent permissions:** reader, verifier, and drafter each have a distinct permitted tool.
+- **Invocation-bound capabilities:** calls are tied to the current invoice and workflow invocation, with limited call counts and expiry.
+- **Gateway enforcement:** requests are authenticated and checked before a finance tool runs.
+- **Invoice validation:** sample rules check vendor approval, purchase-order vendor and currency, amount limits, and duplicate invoice numbers.
+- **Prompt-injection demonstration:** one sample invoice contains hostile instructions. The reader's attempted draft creation is outside its scope and is blocked.
+- **Live workflow display:** the UI shows agent progress, verification results, draft status, and allowed or blocked calls.
+- **Audit and state persistence:** the demo records gateway activity and invocation state locally using a signed audit log and SQLite.
+- **Safe simulated payments:** drafts are local sample records and cannot be released or paid.
+
+## Run locally
+
+From the repository root:
 
 ```powershell
 python -m venv .venv
 . .venv/Scripts/Activate.ps1
 pip install -r requirements.txt
-python -m unittest discover -s tests -v
-python experiments/run_experiments.py
-```
-
-Run the local HTTP demo with:
-
-```powershell
 uvicorn delegateguard.asgi:app --host 127.0.0.1 --port 8000
 ```
 
-It opens the agent console at `/`, and exposes `GET /health`, `GET /metrics`, `POST /v1/demo/run`, `GET /v1/demo/audit`, and `POST /v1/tool-calls`. The console includes a normal-ticket preset and a prompt-injection example. The demo generates fresh identities at process start, so external clients cannot make authorized tool calls unless they are provisioned with the corresponding signing identity and token. Its purpose is to exercise the HTTP boundary and inspect health/metrics. Do not expose it on a public network.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000), select an invoice, and choose **Process invoice**. The workflow is deterministic Python code over sample data; it does not call an LLM.
 
-The experiments use `SimulatedBrain`; generated attack rates are pipeline demonstrations, not evidence about real model behavior.
+## Sample scenarios
 
-## Architecture
-
-A request crosses these layers:
-
-1. `api.py` parses HTTP requests and maps gateway decisions to responses.
-2. `gateway.py` authenticates the signed request, verifies token scope, invokes argument validation, reserves configured call limits, and dispatches the tool call.
-3. `token.py` issues and verifies signed delegation chains. Every delegated block must preserve or narrow parent constraints.
-4. `policy.py` evaluates argument constraints carried by the token chain.
-5. `state.py` stores invocation closure and per-invocation tool call counters in SQLite.
-6. `audit.py` appends hash-chained gateway-signed events as JSONL.
-7. `tools.py` implements the local mock helpdesk tools and their input schemas.
-
-`system.py` composes the local demonstration; `llm_brain.py` adapts a supplied model client to structured tool requests. Model output remains untrusted and every resulting request must pass through the gateway.
-
-## Service integration
-
-A deployment should construct its `DelegateGuardGateway` using its managed identity and trust configuration, then pass that gateway to `create_app` in `delegateguard.api`. The HTTP API accepts a signed request and delegation token; it does not provision caller identities, issue tokens, or configure tools for you. Put the service behind TLS and network access controls, and authenticate service operators separately.
-
-Identity objects accept Ed25519 PEM private-key bytes, and `Registry.register_public` accepts trusted public keys. Load key material from a managed secret or workload identity provider; do not commit keys or store private keys in source configuration. The current `HelpdeskSystem` intentionally generates ephemeral identities for its demo. Use a stable gateway signing key if audit signatures must remain verifiable across restarts and key rotation.
-
-`DELEGATEGUARD_STATE` selects the SQLite state file. `DELEGATEGUARD_AUDIT` selects the JSONL audit file. Mount these on protected durable storage and define backup, retention, and recovery procedures. Audit argument fields whose names contain `body`, `content`, `password`, `secret`, or `token` are redacted; other values may still be sensitive, so review schemas before production use.
-
-## Current limitations and next implementation steps
-
-- The helpdesk adapter is in-memory. Real tools need narrow adapters, separate least-privilege credentials, timeouts, idempotency, and bounded retries.
-- There is no human approval workflow. Add reviewer identities, approval records bound to action arguments and invocation, and an authenticated approval endpoint before allowing consequential actions.
-- `GET /metrics` reports process-local counters only. Export metrics and audit events to the deployment's monitoring and security systems.
-- Invocation state is persistent SQLite, but lifecycle cleanup/retention is not implemented.
-- Audit files are append-only by application convention, not immutable storage. Protect them from modification and verify them with a stable gateway public key.
-- Prompt injection can still misuse an action already allowed by policy. Scope actions to the user's intent and require review for high-impact operations.
-- The provider-neutral `LLMBrain` expects a callable that returns structured tool calls; provider setup, credentials, retries, privacy policy, and model-specific validation belong to the deployment.
-
-## Repository map
-
-| Path | Responsibility |
+| Invoice | Demo behavior |
 |---|---|
-| `delegateguard/api.py`, `asgi.py` | HTTP factory and local demo entrypoint |
-| `delegateguard/gateway.py` | Authentication, authorization, and dispatch orchestration |
-| `delegateguard/token.py`, `identity.py` | Delegation tokens, signing identities, trust registry |
-| `delegateguard/policy.py` | Token-bound argument constraint checks |
-| `delegateguard/state.py` | SQLite invocation lifecycle and call counters |
-| `delegateguard/audit.py` | Signed hash-chained JSONL audit log |
-| `delegateguard/tools.py` | Tool schemas and mock helpdesk implementations |
-| `delegateguard/system.py`, `llm_brain.py` | Demo workflow and model adapter interface |
-| `experiments/`, `results/` | Simulated evaluations and generated result artifacts |
-| `tests/` | Unit tests |
-| `PLAN.md` | Implementation status and rollout plan |
+| `INV-1001` | Approved vendor and matching purchase order; verification passes and a simulated draft is created. |
+| `INV-1002` | Vendor is unapproved and does not match the purchase order; flagged for review and no draft is created. |
+| `INV-1003` | Invoice notes contain hostile instructions; the reader's attempt to create a draft is blocked, then the authorized verification flow continues. |
+| `INV-1004` | A second valid Acme invoice, used to show that distinct invoice numbers can be processed separately. |
+
+Duplicate invoice detection is implemented in the finance validation rules. The current sample queue does not include a duplicate pair.
+
+## Agent roles and functions
+
+| Agent | Allowed function | Responsibility |
+|---|---|---|
+| Invoice Reader | `read_invoice` | Reads only the selected invoice. It cannot verify records or create a draft. |
+| Invoice Verifier | `verify_invoice` | Checks invoice details against vendor and purchase-order records. |
+| Payment Drafter | `create_payment_draft` | Creates a draft after successful verification. The adapter uses the verified invoice's payee and amount; the agent cannot release a payment. |
+
+The workflow orchestrator issues the scoped capabilities and invokes the agents in order. The gateway validates each signed request, checks its scope and constraints, dispatches permitted tools, and logs the decision.
+
+## HTTP API
+
+| Method and path | Function |
+|---|---|
+| `GET /` | Serves the finance operations UI. |
+| `GET /health` | Returns service health. |
+| `GET /metrics` | Returns process-local allowed, denied, and error counters. |
+| `GET /v1/finance/invoices` | Lists the synthetic invoice queue. |
+| `POST /v1/finance/process` | Runs the workflow and returns its result. Request body: `{"invoice_id":"INV-1001"}`. |
+| `POST /v1/finance/process/stream` | Streams agent stages, tool decisions, and the final result for the UI. |
+| `GET /v1/finance/drafts` | Lists simulated drafts awaiting human approval. |
+| `GET /v1/finance/audit?limit=50` | Returns recent gateway audit events. |
+
+## Project layout
+
+| Path | Purpose |
+|---|---|
+| `delegateguard/finance/data.py` | Synthetic invoices, vendors, and purchase orders. |
+| `delegateguard/finance/agents.py` | Reader, verifier, and payment-drafter agent logic. |
+| `delegateguard/finance/tools.py` | Finance tool definitions and validation rules. |
+| `delegateguard/finance/workflow.py` | Workflow orchestration and scoped capability issuance. |
+| `delegateguard/ui/index.html` | Interactive finance console. |
+| `delegateguard/api.py` | HTTP endpoints and live event streaming. |
+| `delegateguard/gateway.py` | Request authentication, authorization, policy enforcement, and tool dispatch. |
+| `delegateguard/token.py`, `identity.py` | Demo identities and signed capabilities. |
+| `delegateguard/policy.py`, `state.py`, `audit.py` | Policy checks, SQLite state, and audit logging. |
+| `experiments/`, `tests/` | Earlier helpdesk prototype materials and project checks. |
+| `PLAN.md` | Project scope and proposed future work. |
+
+## Current scope and limitations
+
+This is a learning and demonstration prototype, not a production finance system. It uses deterministic agent logic and synthetic in-memory business records. It does not parse uploaded invoices, use an LLM, authenticate real employees, connect to an accounting provider, or implement human approval and payment release. The current signing keys and local SQLite state are for a local demo, not production key management or durable multi-user operation.
+
+A production system would need, at minimum, authenticated users, durable business data, document ingestion, provider integrations, a real approval workflow, managed keys, operational monitoring, and a security review.

@@ -18,9 +18,9 @@ def make_request(agent: Identity, token, tool, args, invocation_id):
 
 
 class DelegateGuardGateway:
-    def __init__(self, registry, tools, signer: Identity, state_path=None):
+    def __init__(self, registry, tools, signer: Identity, state_path=None, audit_path=None):
         self.registry, self.tools = registry, tools
-        self.log = AuditLog(signer)
+        self.log = AuditLog(signer, audit_path)
         self.state = InvocationStore(state_path)
 
     def close_invocation(self, inv):

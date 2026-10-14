@@ -1,8 +1,11 @@
 """HTTP boundary for an already configured DelegateGuard gateway."""
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import Any
+import asyncio
+import json
+import queue
 import random
 import re
 import uuid
@@ -17,7 +20,7 @@ class ToolRequest(BaseModel):
         extra = "forbid"
 
 
-def create_app(gateway, demo_system=None):
+def create_app(gateway, demo_system=None, finance_workflow=None):
     app = FastAPI(title="DelegateGuard", version="1.0.0")
     app.state.metrics = {"allowed": 0, "denied": 0, "errors": 0}
 
@@ -89,6 +92,78 @@ def create_app(gateway, demo_system=None):
                 event = record.get("entry", {})
                 result.append({k: event.get(k) for k in ("seq", "ts", "caller", "tool", "decision", "reason", "invocation_id", "args")})
             return {"events": result}
+
+    if finance_workflow is not None:
+        from pydantic import Field
+
+        class FinanceRunRequest(BaseModel):
+            invoice_id: str = Field(min_length=1, max_length=64)
+
+            class Config:
+                extra = "forbid"
+
+        @app.get("/v1/finance/invoices")
+        def finance_invoices():
+            return {"invoices": finance_workflow.list_invoices()}
+
+        @app.post("/v1/finance/process/stream")
+        async def process_invoice_stream(request: FinanceRunRequest):
+            updates = queue.Queue()
+            def report(event):
+                updates.put(event)
+
+            async def stream_events():
+                task = asyncio.create_task(asyncio.to_thread(
+                    finance_workflow.run, request.invoice_id, report
+                ))
+                while True:
+                    try:
+                        event = await asyncio.to_thread(updates.get, True, 0.25)
+                        yield "data: " + json.dumps(event) + "\n\n"
+                    except queue.Empty:
+                        pass
+                    if task.done() and updates.empty():
+                        try:
+                            result = task.result()
+                            app.state.metrics["allowed"] += sum(1 for e in result["events"] if e.get("decision") == "allow")
+                            app.state.metrics["denied"] += sum(1 for e in result["events"] if e.get("decision") == "deny")
+                            yield "data: " + json.dumps({"type": "result", "result": result}) + "\n\n"
+                        except ValueError as exc:
+                            yield "data: " + json.dumps({"type": "error", "message": str(exc)}) + "\n\n"
+                        except Exception:
+                            app.state.metrics["errors"] += 1
+                            yield "data: " + json.dumps({"type": "error", "message": "Invoice workflow failed"}) + "\n\n"
+                        break
+
+            return StreamingResponse(
+                stream_events(), media_type="text/event-stream",
+                headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+            )
+
+        @app.get("/v1/finance/drafts")
+        def finance_drafts():
+            return {"drafts": list(finance_workflow.tools.drafts.values())}
+
+        @app.get("/v1/finance/audit")
+        def finance_audit(limit: int = 50):
+            if not 1 <= limit <= 100:
+                raise HTTPException(status_code=422, detail="limit must be between 1 and 100")
+            records = finance_workflow.gateway.log.entries[-limit:]
+            return {"events": [record.get("entry", {}) for record in reversed(records)]}
+
+        @app.post("/v1/finance/process")
+        def process_invoice(request: FinanceRunRequest):
+            try:
+                result = finance_workflow.run(request.invoice_id)
+                attempts = result["events"]
+                app.state.metrics["allowed"] += sum(1 for e in attempts if e.get("decision") == "allow")
+                app.state.metrics["denied"] += sum(1 for e in attempts if e.get("decision") == "deny")
+                return result
+            except ValueError as exc:
+                raise HTTPException(status_code=404, detail=str(exc)) from exc
+            except Exception as exc:
+                app.state.metrics["errors"] += 1
+                raise HTTPException(status_code=500, detail="Invoice workflow failed") from exc
 
     @app.post("/v1/tool-calls")
     def tool_call(request: ToolRequest):
