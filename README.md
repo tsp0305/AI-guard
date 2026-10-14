@@ -12,7 +12,7 @@ DelegateGuard demonstrates a least-privilege approach: each agent gets a short-l
 
 ## What the project does
 
-The browser console runs a three-agent accounts-payable workflow on synthetic invoice, vendor, and purchase-order records:
+The browser console runs a three-agent accounts-payable workflow on synthetic invoice, vendor, and purchase-order records. Sample amounts are denominated in Indian rupees (INR) and formatted for the Indian locale:
 
 1. **Invoice Reader** reads the selected invoice.
 2. **Invoice Verifier** checks the vendor, purchase order, currency, amount, and duplicate invoice number.
