@@ -1,7 +1,7 @@
 {
   "dataset_id": "delegateguard-finance-v2",
   "title": "Expanded synthetic finance workflow and permission checks",
-  "purpose": "42 fictional, repeatable invoice and capability-permission scenarios for implementation checks; no real financial or personal data.",
+  "purpose": "40 fictional, repeatable invoice and capability-permission scenarios for implementation checks; no real financial or personal data.",
   "cases": [
     {
       "id": "invoice-clean",
