@@ -9,7 +9,7 @@ from ..token import attenuate, issue_root
 from .workflow import InvoiceWorkflow
 
 
-DATASET_PATH = Path(__file__).with_name("test_dataset.json")
+DATASET_PATH = Path(__file__).with_name("delegateguard_finance_v2.dstore")
 
 
 def load_dataset():
@@ -20,11 +20,13 @@ def dataset_summary():
     dataset = load_dataset()
     return {
         "dataset_id": dataset["dataset_id"],
+        "format": dataset["format"],
         "title": dataset["title"],
         "purpose": dataset["purpose"],
         "total_cases": len(dataset["cases"]),
         "workflow_cases": sum(c["type"] == "invoice_workflow" for c in dataset["cases"]),
         "permission_cases": sum(c["type"] == "permission_probe" for c in dataset["cases"]),
+        "download_path": "/v1/finance/simulation/dataset/download",
         "cases": [
             {key: case[key] for key in ("id", "type", "title", "description")}
             for case in dataset["cases"]

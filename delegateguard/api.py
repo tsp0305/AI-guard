@@ -1,6 +1,6 @@
 """HTTP boundary for an already configured DelegateGuard gateway."""
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import Any
 import asyncio
@@ -95,7 +95,7 @@ def create_app(gateway, demo_system=None, finance_workflow=None):
 
     if finance_workflow is not None:
         from pydantic import Field
-        from .finance.simulation import dataset_summary, run_simulation
+        from .finance.simulation import DATASET_PATH, dataset_summary, run_simulation
 
         class FinanceRunRequest(BaseModel):
             invoice_id: str = Field(min_length=1, max_length=64)
@@ -114,6 +114,14 @@ def create_app(gateway, demo_system=None, finance_workflow=None):
         @app.get("/v1/finance/simulation/dataset")
         def finance_simulation_dataset():
             return dataset_summary()
+
+        @app.get("/v1/finance/simulation/dataset/download")
+        def finance_simulation_dataset_download():
+            return FileResponse(
+                DATASET_PATH,
+                media_type="application/vnd.delegateguard.dstore+json",
+                filename=DATASET_PATH.name,
+            )
 
         @app.post("/v1/finance/simulation/run")
         def finance_simulation_run():

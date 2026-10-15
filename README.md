@@ -61,11 +61,11 @@ Duplicate invoice detection is implemented in the finance validation rules. The 
 
 ## Synthetic dataset simulation
 
-The application includes a separate, fictional test dataset at `delegateguard/finance/test_dataset.json`. It contains 14 repeatable scenarios: eight invoice-workflow cases and six permission checks. The invoice cases cover a valid invoice, an unapproved vendor, purchase-order mismatch, amount over the purchase order, currency mismatch, duplicate invoice number, missing purchase order, and a prompt-injection note. Permission checks cover wrong-tool attempts by all four agents, access to a different invoice, and the one-call limit.
+The application includes an expanded, fictional dataset at `delegateguard/finance/delegateguard_finance_v2.dstore`. It contains 40 repeatable scenarios: 22 invoice-workflow cases and 18 agent-permission checks. Coverage includes approved and unapproved vendors, amount and currency boundaries, missing or mismatched purchase orders, duplicate invoice numbers, ordinary notes, several prompt-injection patterns, scoped tool access, cross-invoice attempts, and valid in-scope calls.
 
-Open **Dataset simulation** in the UI and choose **Run all scenarios**. The runner invokes the same workflow and authorization gateway as invoice processing, compares observed behavior with the expected behavior in the dataset, and shows pass/fail results. Each simulation uses temporary state and removes it afterward; it does not add drafts or events to the regular demo. The simulation bypasses Gemini so the results are deterministic and do not make model API calls.
+Open **Dataset simulation** in the UI and choose **Run all scenarios**. Every case shows its processing steps, agent tool calls, and allow/block outcomes alongside expected and observed results. Choose **Download dataset (.dstore)** to save the runnable dataset. `.dstore` is a project-defined, UTF-8 JSON format; it is not a universal industry standard. The runner invokes the same workflow and authorization gateway as invoice processing, compares observed behavior with the expected behavior in the dataset, and shows pass/fail results. Each simulation uses temporary state and removes it afterward; it does not add drafts or events to the regular demo. The simulation bypasses Gemini so the results are deterministic and do not make model API calls.
 
-These checks show whether the current implementation behaves as encoded for these synthetic cases. They are not measurements of real-world attack resistance or research efficacy. The API provides `GET /v1/finance/simulation/dataset` for the scenario list and `POST /v1/finance/simulation/run` to run the full suite.
+These checks show whether the current implementation behaves as encoded for these synthetic cases. They are not measurements of real-world attack resistance or research efficacy. The API provides `GET /v1/finance/simulation/dataset` for the scenario list, `GET /v1/finance/simulation/dataset/download` to download the `.dstore` file, and `POST /v1/finance/simulation/run` to run the full suite.
 
 ## Agent roles and functions
 
@@ -92,6 +92,7 @@ The workflow orchestrator issues the scoped capabilities and invokes the agents 
 | `GET /v1/finance/drafts` | Lists simulated drafts awaiting human approval. |
 | `GET /v1/finance/audit?limit=50` | Returns recent gateway audit events. |
 | `GET /v1/finance/simulation/dataset` | Lists the synthetic invoice and permission scenarios. |
+| `GET /v1/finance/simulation/dataset/download` | Downloads the runnable `.dstore` dataset file. |
 | `POST /v1/finance/simulation/run` | Runs all scenarios in isolated temporary state without calling Gemini. |
 
 ## Project layout
@@ -99,7 +100,7 @@ The workflow orchestrator issues the scoped capabilities and invokes the agents 
 | Path | Purpose |
 |---|---|
 | `delegateguard/finance/data.py` | Synthetic invoices, vendors, and purchase orders. |
-| `delegateguard/finance/test_dataset.json` | Repeatable synthetic workflow and permission scenarios. |
+| `delegateguard/finance/delegateguard_finance_v2.dstore` | Expanded 40-case synthetic workflow and permission dataset (project-defined JSON format). |
 | `delegateguard/finance/simulation.py` | Isolated dataset runner and expected-vs-observed comparisons. |
 | `delegateguard/finance/agents.py` | Reader, verifier, risk analyst, and payment-drafter roles. |
 | `delegateguard/finance/llm.py` | Gemini structured analysis and safe rule-based fallback. |
