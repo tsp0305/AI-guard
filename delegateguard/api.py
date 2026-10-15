@@ -95,6 +95,7 @@ def create_app(gateway, demo_system=None, finance_workflow=None):
 
     if finance_workflow is not None:
         from pydantic import Field
+        from .finance.simulation import dataset_summary, run_simulation
 
         class FinanceRunRequest(BaseModel):
             invoice_id: str = Field(min_length=1, max_length=64)
@@ -109,6 +110,18 @@ def create_app(gateway, demo_system=None, finance_workflow=None):
         @app.get("/v1/finance/status")
         def finance_status():
             return {"agents": 4, "model": finance_workflow.advisor.status()}
+
+        @app.get("/v1/finance/simulation/dataset")
+        def finance_simulation_dataset():
+            return dataset_summary()
+
+        @app.post("/v1/finance/simulation/run")
+        def finance_simulation_run():
+            try:
+                return run_simulation()
+            except Exception as exc:
+                app.state.metrics["errors"] += 1
+                raise HTTPException(status_code=500, detail="Synthetic simulation failed") from exc
 
         @app.post("/v1/finance/process/stream")
         async def process_invoice_stream(request: FinanceRunRequest):
