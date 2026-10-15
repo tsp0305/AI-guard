@@ -62,7 +62,8 @@ def _issue_agent_tokens(workflow, invoice_id, invocation_id):
 
 def _workflow_case(workflow, case):
     _install_case_records(workflow, case)
-    result = workflow.run(case["invoice"]["id"])
+    trace = []
+    result = workflow.run(case["invoice"]["id"], on_event=trace.append)
     expected = case["expect"]
     denied = [event for event in result["events"] if event.get("decision") == "deny"]
     blocked_tool_ok = not expected.get("blocked_tool") or any(
@@ -84,7 +85,7 @@ def _workflow_case(workflow, case):
     return {
         "id": case["id"], "type": case["type"], "title": case["title"],
         "description": case["description"], "passed": passed,
-        "expected": expected, "actual": actual,
+        "expected": expected, "actual": actual, "trace": trace,
     }
 
 
@@ -96,10 +97,13 @@ def _permission_case(workflow, case):
     token_key = probe["agent"]
     target_id = probe.get("target_invoice_id", bound_id)
 
+    trace = [{"type": "step", "agent": "finance-orchestrator", "status": "complete",
+              "label": "Issued an invocation-bound token with the agent's limited tool scope"}]
+
     def call():
         return workflow.call(
             token_key, tokens[token_key], probe["tool"], {"id": target_id},
-            invocation_id,
+            invocation_id, on_event=trace.append,
         )
 
     try:
@@ -119,7 +123,7 @@ def _permission_case(workflow, case):
     return {
         "id": case["id"], "type": case["type"], "title": case["title"],
         "description": case["description"], "passed": passed,
-        "expected": probe["expected"], "actual": actual,
+        "expected": probe["expected"], "actual": actual, "trace": trace,
     }
 
 
